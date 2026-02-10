@@ -5,26 +5,36 @@
   <title>影子跟读练习</title>
   <style>
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
       max-width: 800px;
       margin: 40px auto;
       line-height: 1.8;
     }
     button {
-      margin: 8px 0;
-      padding: 8px 16px;
-      font-size: 16px;
+      margin-right: 8px;
+      padding: 6px 12px;
+      font-size: 14px;
     }
     .sentence {
-      cursor: pointer;
-      padding: 6px;
+      padding: 8px;
       border-radius: 6px;
+      cursor: pointer;
     }
     .sentence:hover {
-      background: #f0f0f0;
+      background: #f2f2f2;
     }
     .active {
       background: #dbeafe;
+    }
+    .pinyin {
+      color: #666;
+      font-size: 14px;
+      display: none;
+    }
+    .trans {
+      color: #999;
+      font-size: 14px;
+      display: none;
     }
   </style>
 </head>
@@ -34,98 +44,111 @@
 
 <button id="playAll">▶️ 全文播放</button>
 <button id="pause">⏸ 暂停</button>
+<button id="togglePinyin">拼音</button>
+<button id="toggleTrans">翻译</button>
 
 <hr />
 
-<div id="text"></div>
+<div id="content"></div>
 
 <audio id="audio" src="audio.mp3"></audio>
 
 <script>
-/* ========= 1️⃣ 教师只需要改这里 ========= */
+/* =========================
+   ① 教师只改这里（内容区）
+   ========================= */
 
-const rawText = `
-今天天气很好。
-我们一起去喝咖啡吧。
-你觉得怎么样？
-`;
+const sentences = [
+  {
+    zh: "今天天气很好。",
+    pinyin: "Jīntiān tiānqì hěn hǎo.",
+    trans: "Today the weather is very nice."
+  },
+  {
+    zh: "我们一起去喝咖啡吧。",
+    pinyin: "Wǒmen yìqǐ qù hē kāfēi ba.",
+    trans: "Let's go have coffee together."
+  },
+  {
+    zh: "你觉得怎么样？",
+    pinyin: "Nǐ juéde zěnmeyàng?",
+    trans: "What do you think?"
+  }
+];
 
-/* ========= 2️⃣ 自动切句 ========= */
+/* =========================
+   ② 不要再动下面的代码
+   ========================= */
 
-const sentences = rawText
-  .split(/(?<=[。！？])/)
-  .map(s => s.trim())
-  .filter(Boolean);
+const content = document.getElementById("content");
+const audio = document.getElementById("audio");
 
-/* ========= 3️⃣ 渲染文本 ========= */
+let showPinyin = false;
+let showTrans = false;
+let timings = [];
+let stopTimer = null;
 
-const textEl = document.getElementById("text");
-
+/* 渲染文本 */
 sentences.forEach((s, i) => {
-  const span = document.createElement("div");
-  span.className = "sentence";
-  span.innerText = s;
-  span.dataset.index = i;
-  textEl.appendChild(span);
+  const div = document.createElement("div");
+  div.className = "sentence";
+  div.dataset.index = i;
+  div.innerHTML = `
+    <div>${s.zh}</div>
+    <div class="pinyin">${s.pinyin || ""}</div>
+    <div class="trans">${s.trans || ""}</div>
+  `;
+  content.appendChild(div);
 });
 
-/* ========= 4️⃣ 音频 + 时间映射（MVP 版） ========= */
-
-/**
- * ⚠️ 这是 MVP 的“平均分配时间”
- * 后期可以换成 AI 对齐
- */
-const audio = document.getElementById("audio");
-let sentenceTimings = [];
-
+/* 音频加载后，平均切时间 */
 audio.addEventListener("loadedmetadata", () => {
-  const duration = audio.duration;
-  const avg = duration / sentences.length;
-
-  sentenceTimings = sentences.map((_, i) => ({
+  const avg = audio.duration / sentences.length;
+  timings = sentences.map((_, i) => ({
     start: i * avg,
     end: (i + 1) * avg
   }));
 });
 
-/* ========= 5️⃣ 点击句子播放 ========= */
-
-let stopTimer = null;
-
-function clearActive() {
-  document
-    .querySelectorAll(".sentence")
-    .forEach(el => el.classList.remove("active"));
-}
-
+/* 点击句子播放 */
 document.querySelectorAll(".sentence").forEach(el => {
-  el.addEventListener("click", () => {
+  el.onclick = () => {
     const i = Number(el.dataset.index);
-    const { start, end } = sentenceTimings[i];
+    const { start, end } = timings[i];
 
-    clearActive();
+    document.querySelectorAll(".sentence").forEach(s => s.classList.remove("active"));
     el.classList.add("active");
 
     audio.currentTime = start;
     audio.play();
 
-    if (stopTimer) clearTimeout(stopTimer);
-    stopTimer = setTimeout(() => {
-      audio.pause();
-    }, (end - start) * 1000);
-  });
+    clearTimeout(stopTimer);
+    stopTimer = setTimeout(() => audio.pause(), (end - start) * 1000);
+  };
 });
 
-/* ========= 6️⃣ 全文播放 ========= */
-
+/* 全文播放 */
 document.getElementById("playAll").onclick = () => {
-  clearActive();
+  document.querySelectorAll(".sentence").forEach(s => s.classList.remove("active"));
   audio.currentTime = 0;
   audio.play();
 };
 
-document.getElementById("pause").onclick = () => {
-  audio.pause();
+document.getElementById("pause").onclick = () => audio.pause();
+
+/* 拼音 / 翻译开关 */
+document.getElementById("togglePinyin").onclick = () => {
+  showPinyin = !showPinyin;
+  document.querySelectorAll(".pinyin").forEach(p => {
+    p.style.display = showPinyin ? "block" : "none";
+  });
+};
+
+document.getElementById("toggleTrans").onclick = () => {
+  showTrans = !showTrans;
+  document.querySelectorAll(".trans").forEach(t => {
+    t.style.display = showTrans ? "block" : "none";
+  });
 };
 </script>
 
