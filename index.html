@@ -1,260 +1,204 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="zh">
 <head>
 <meta charset="UTF-8" />
-<title>影子跟读练习</title>
-
+<title>影子跟读 · 学员页</title>
 <style>
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-  max-width: 860px;
-  margin: 40px auto;
-  line-height: 1.8;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #fff;
+  color: #111;
 }
 
-/* 控制条 */
-.controls {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 16px;
+/* ===== Header ===== */
+.header {
+  padding: 14px;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+  font-weight: 600;
 }
 
-.btn {
-  border: 1px solid #ccc;
-  background: white;
-  padding: 6px 12px;
-  border-radius: 10px;
-  font-size: 18px;
-  cursor: pointer;
+/* ===== Cover ===== */
+.cover img {
+  width: 100%;
+  display: block;
 }
 
-.btn.active {
-  background: #dbeafe;
-  border-color: #60a5fa;
+/* ===== Text Area ===== */
+.content {
+  padding: 20px;
 }
 
-/* 句子 */
 .sentence {
-  padding: 10px;
-  border-radius: 8px;
+  margin-bottom: 18px;
   cursor: pointer;
-  margin-bottom: 8px;
-}
-
-.sentence:hover {
-  background: #f3f4f6;
 }
 
 .sentence.active {
-  background: #dbeafe;
+  background: #f2f7ff;
+  border-radius: 8px;
+  padding: 6px;
 }
 
-.pinyin {
+.cn {
+  font-size: 20px;
+  line-height: 1.6;
+}
+
+.py {
+  font-size: 14px;
+  color: #f57c00;
+  display: none;
+}
+
+.tr {
   font-size: 14px;
   color: #666;
   display: none;
 }
 
-.trans {
+/* ===== Controls ===== */
+.controls {
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  border-top: 1px solid #eee;
+  padding: 12px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.controls button {
+  background: none;
+  border: none;
+  font-size: 20px;
+}
+
+/* ===== Toggles ===== */
+.toggles {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0 20px;
+}
+
+.toggles button {
   font-size: 14px;
-  color: #999;
-  display: none;
-}
-
-/* 录音 */
-#recordStatus {
-  color: red;
-  font-weight: bold;
-  margin-left: 8px;
-}
-
-.recordings {
-  margin-top: 24px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>影子跟读练习</h2>
+<div class="header">ITの仕事でAIを使う人が急増</div>
 
-<!-- 控制条 -->
+<div class="cover">
+  <img src="cover.jpg" alt="cover" />
+</div>
+
+<div class="toggles">
+  <button onclick="togglePinyin()">拼音</button>
+  <button onclick="toggleTrans()">翻译</button>
+</div>
+
+<div class="content" id="content"></div>
+
 <div class="controls">
-  <button class="btn" id="playBtn">▶️</button>
-  <button class="btn" id="pauseBtn">⏸</button>
-  <button class="btn" id="loopBtn">🔁</button>
-  <button class="btn" id="recordBtn">🎙</button>
-  <button class="btn" id="togglePinyin">拼音</button>
-  <button class="btn" id="toggleTrans">翻译</button>
-  <span id="recordStatus"></span>
+  <button onclick="playAll()">▶️</button>
+  <button onclick="repeatSentence()">🔁</button>
+  <button onclick="startRecord()">🎙</button>
+  <button onclick="audio.pause()">⏸</button>
 </div>
 
-<hr />
-
-<!-- 文本区 -->
-<div id="content"></div>
-
-<!-- 录音回听 -->
-<div class="recordings">
-  <h3>🎧 我的录音</h3>
-  <div id="recordList"></div>
-</div>
-
-<!-- 原音频 -->
 <audio id="audio" src="audio.mp3"></audio>
 
 <script>
-/* =====================================================
-   ① DOM 获取（非常重要，必须最先）
-   ===================================================== */
-const playBtn = document.getElementById("playBtn");
-const pauseBtn = document.getElementById("pauseBtn");
-const loopBtn = document.getElementById("loopBtn");
-const recordBtn = document.getElementById("recordBtn");
-const togglePinyin = document.getElementById("togglePinyin");
-const toggleTrans = document.getElementById("toggleTrans");
-const recordStatus = document.getElementById("recordStatus");
-
-const audio = document.getElementById("audio");
-const content = document.getElementById("content");
-const recordList = document.getElementById("recordList");
-
-/* =====================================================
-   ② 内容区（你以后只改这里）
-   ===================================================== */
-const sentences = [
+const data = [
   {
-    zh: "今天天气很好。",
-    pinyin: "Jīntiān tiānqì hěn hǎo.",
-    trans: "Today the weather is very nice."
+    text: "IT的工作中，使用AI的人正在迅速增加。",
+    pinyin: "IT de gōngzuò zhōng, shǐyòng AI de rén zhèngzài xùnsù zēngjiā。",
+    trans: "在IT工作中，使用AI的人正在迅速增加。",
+    start: 0,
+    end: 4
   },
   {
-    zh: "我们一起去喝咖啡吧。",
-    pinyin: "Wǒmen yìqǐ qù hē kāfēi ba.",
-    trans: "Let's go have coffee together."
-  },
-  {
-    zh: "你觉得怎么样？",
-    pinyin: "Nǐ juéde zěnmeyàng?",
-    trans: "What do you think?"
+    text: "根据调查，使用过AI的人数是去年的1.5倍。",
+    pinyin: "Gēnjù diàochá, shǐyòng guò AI de rénshù shì qùnián de 1.5 bèi。",
+    trans: "根据调查，使用过AI的人数是去年的1.5倍。",
+    start: 4,
+    end: 8
   }
 ];
 
-/* =====================================================
-   ③ 渲染文本
-   ===================================================== */
-sentences.forEach((s, i) => {
+const content = document.getElementById("content");
+const audio = document.getElementById("audio");
+let current = null;
+
+/* Render */
+data.forEach((s, i) => {
   const div = document.createElement("div");
   div.className = "sentence";
-  div.dataset.index = i;
   div.innerHTML = `
-    <div>${s.zh}</div>
-    <div class="pinyin">${s.pinyin}</div>
-    <div class="trans">${s.trans}</div>
+    <div class="cn">${s.text}</div>
+    <div class="py">${s.pinyin}</div>
+    <div class="tr">${s.trans}</div>
   `;
+  div.onclick = () => playSentence(i);
   content.appendChild(div);
 });
 
-/* =====================================================
-   ④ 音频切句（平均分配时间）
-   ===================================================== */
-let timings = [];
-let currentIndex = null;
-let loopOn = false;
-let stopTimer = null;
-
-audio.addEventListener("loadedmetadata", () => {
-  const avg = audio.duration / sentences.length;
-  timings = sentences.map((_, i) => ({
-    start: i * avg,
-    end: (i + 1) * avg
-  }));
-});
-
-/* =====================================================
-   ⑤ 播放某一句
-   ===================================================== */
+/* Playback */
 function playSentence(i) {
-  currentIndex = i;
-  const { start, end } = timings[i];
-
-  document.querySelectorAll(".sentence").forEach(s =>
-    s.classList.remove("active")
-  );
-  document.querySelector(`.sentence[data-index="${i}"]`)
-    .classList.add("active");
-
-  audio.currentTime = start;
+  current = i;
+  document.querySelectorAll(".sentence").forEach((el, idx) => {
+    el.classList.toggle("active", idx === i);
+  });
+  audio.currentTime = data[i].start;
   audio.play();
-  playBtn.classList.add("active");
-
-  clearTimeout(stopTimer);
-  stopTimer = setTimeout(() => {
-    if (loopOn) {
-      playSentence(i);
-    } else {
-      audio.pause();
-      playBtn.classList.remove("active");
-    }
-  }, (end - start) * 1000);
+  audio.ontimeupdate = () => {
+    if (audio.currentTime >= data[i].end) audio.pause();
+  };
 }
 
-document.querySelectorAll(".sentence").forEach(el => {
-  el.onclick = () => playSentence(Number(el.dataset.index));
-});
+function playAll() {
+  audio.currentTime = 0;
+  audio.play();
+}
 
-/* =====================================================
-   ⑥ 控制按钮
-   ===================================================== */
-playBtn.onclick = () => {
-  if (currentIndex !== null) {
-    playSentence(currentIndex);
-  } else {
-    audio.currentTime = 0;
-    audio.play();
-    playBtn.classList.add("active");
-  }
-};
+function repeatSentence() {
+  if (current !== null) playSentence(current);
+}
 
-pauseBtn.onclick = () => {
-  audio.pause();
-  playBtn.classList.remove("active");
-};
-
-loopBtn.onclick = () => {
-  loopOn = !loopOn;
-  loopBtn.classList.toggle("active", loopOn);
-};
-
-togglePinyin.onclick = () => {
-  document.querySelectorAll(".pinyin").forEach(p => {
-    p.style.display = p.style.display === "block" ? "none" : "block";
+/* Toggles */
+function togglePinyin() {
+  document.querySelectorAll(".py").forEach(el => {
+    el.style.display = el.style.display === "block" ? "none" : "block";
   });
-};
+}
 
-toggleTrans.onclick = () => {
-  document.querySelectorAll(".trans").forEach(t => {
-    t.style.display = t.style.display === "block" ? "none" : "block";
+function toggleTrans() {
+  document.querySelectorAll(".tr").forEach(el => {
+    el.style.display = el.style.display === "block" ? "none" : "block";
   });
-};
+}
 
-/* =====================================================
-   ⑦ 录音（可回听）
-   ===================================================== */
-let recorder;
-let recording = false;
+/* Recording (basic) */
+let recorder, chunks = [];
+async function startRecord() {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  recorder = new MediaRecorder(stream);
+  recorder.start();
+  recorder.ondataavailable = e => chunks.push(e.data);
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: "audio/webm" });
+    chunks = [];
+    alert("录音完成（本地）");
+  };
+  setTimeout(() => recorder.stop(), 10000); // demo: 10s
+}
+</script>
 
-recordBtn.onclick = async () => {
-  if (!recording) {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    recorder = new MediaRecorder(stream);
-    recorder.start();
-
-    recording = true;
-    recordBtn.classList.add("active");
-    recordStatus.innerText = "● 录音中";
-
-    recorder.ondataavailable = e => {
-      const blob = new Blob([e.data], { type: "audio/webm" });
-      con
+</body>
+</html>
