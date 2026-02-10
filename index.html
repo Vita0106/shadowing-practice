@@ -34,4 +34,195 @@ body {
 
 .sentence {
   padding: 10px;
-  border-radi
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.sentence:hover {
+  background: #f3f4f6;
+}
+
+.sentence.active {
+  background: #dbeafe;
+}
+
+.pinyin, .trans {
+  font-size: 14px;
+  display: none;
+}
+
+.pinyin { color: #666; }
+.trans { color: #999; }
+
+#recordStatus {
+  color: red;
+  font-weight: bold;
+}
+
+.recordings {
+  margin-top: 20px;
+}
+
+.recordings h3 {
+  margin-bottom: 6px;
+}
+</style>
+</head>
+<body>
+
+<h2>影子跟读练习</h2>
+
+<div class="controls">
+  <button class="btn" id="playBtn">▶️</button>
+  <button class="btn" id="pauseBtn">⏸</button>
+  <button class="btn" id="loopBtn">🔁</button>
+  <button class="btn" id="recordBtn">🎙</button>
+  <button class="btn" id="togglePinyin">拼音</button>
+  <button class="btn" id="toggleTrans">翻译</button>
+  <span id="recordStatus"></span>
+</div>
+
+<hr />
+
+<div id="content"></div>
+
+<div class="recordings">
+  <h3>🎧 我的录音</h3>
+  <div id="recordList"></div>
+</div>
+
+<audio id="audio" src="audio.mp3"></audio>
+
+<script>
+/* ========= 内容区（你只改这里） ========= */
+
+const sentences = [
+  { zh: "今天天气很好。", pinyin: "Jīntiān tiānqì hěn hǎo.", trans: "Today the weather is very nice." },
+  { zh: "我们一起去喝咖啡吧。", pinyin: "Wǒmen yìqǐ qù hē kāfēi ba.", trans: "Let's go have coffee together." },
+  { zh: "你觉得怎么样？", pinyin: "Nǐ juéde zěnmeyàng?", trans: "What do you think?" }
+];
+
+/* ========= 基础 ========= */
+
+const audio = document.getElementById("audio");
+const content = document.getElementById("content");
+const recordList = document.getElementById("recordList");
+
+let timings = [];
+let currentIndex = null;
+let loopOn = false;
+let stopTimer = null;
+
+/* ========= 渲染句子 ========= */
+
+sentences.forEach((s, i) => {
+  const div = document.createElement("div");
+  div.className = "sentence";
+  div.dataset.index = i;
+  div.innerHTML = `
+    <div>${s.zh}</div>
+    <div class="pinyin">${s.pinyin}</div>
+    <div class="trans">${s.trans}</div>
+  `;
+  content.appendChild(div);
+});
+
+/* ========= 自动切句 ========= */
+
+audio.addEventListener("loadedmetadata", () => {
+  const avg = audio.duration / sentences.length;
+  timings = sentences.map((_, i) => ({
+    start: i * avg,
+    end: (i + 1) * avg
+  }));
+});
+
+/* ========= 播放句子 ========= */
+
+function playSentence(i) {
+  currentIndex = i;
+  const { start, end } = timings[i];
+
+  document.querySelectorAll(".sentence").forEach(s => s.classList.remove("active"));
+  document.querySelector(`.sentence[data-index="${i}"]`).classList.add("active");
+
+  audio.currentTime = start;
+  audio.play();
+  playBtn.classList.add("active");
+
+  clearTimeout(stopTimer);
+  stopTimer = setTimeout(() => {
+    if (loopOn) playSentence(i);
+    else audio.pause();
+  }, (end - start) * 1000);
+}
+
+document.querySelectorAll(".sentence").forEach(el => {
+  el.onclick = () => playSentence(Number(el.dataset.index));
+});
+
+/* ========= 控制按钮 ========= */
+
+playBtn.onclick = () => {
+  if (currentIndex !== null) playSentence(currentIndex);
+  else audio.play();
+};
+
+pauseBtn.onclick = () => {
+  audio.pause();
+  playBtn.classList.remove("active");
+};
+
+loopBtn.onclick = () => {
+  loopOn = !loopOn;
+  loopBtn.classList.toggle("active", loopOn);
+};
+
+togglePinyin.onclick = () => {
+  document.querySelectorAll(".pinyin").forEach(p =>
+    p.style.display = p.style.display === "block" ? "none" : "block"
+  );
+};
+
+toggleTrans.onclick = () => {
+  document.querySelectorAll(".trans").forEach(t =>
+    t.style.display = t.style.display === "block" ? "none" : "block"
+  );
+};
+
+/* ========= 🎙 录音（可回听） ========= */
+
+let recorder;
+let recording = false;
+
+recordBtn.onclick = async () => {
+  if (!recording) {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recorder = new MediaRecorder(stream);
+    recorder.start();
+
+    recording = true;
+    recordBtn.classList.add("active");
+    recordStatus.innerText = "● 录音中";
+
+    recorder.ondataavailable = e => {
+      const blob = new Blob([e.data], { type: "audio/webm" });
+      const url = URL.createObjectURL(blob);
+
+      const audioEl = document.createElement("audio");
+      audioEl.controls = true;
+      audioEl.src = url;
+      recordList.prepend(audioEl);
+    };
+  } else {
+    recorder.stop();
+    recording = false;
+    recordBtn.classList.remove("active");
+    recordStatus.innerText = "";
+  }
+};
+</script>
+
+</body>
+</html>
