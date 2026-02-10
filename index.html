@@ -36,6 +36,9 @@
 <audio id="audioPlayer" controls></audio>
 
 <h3>③ 跟读文本</h3>
+<button onclick="togglePinyin()">拼音</button>
+<button onclick="toggleTranslation()">翻译</button>
+
 <div class="text" id="textDisplay"></div>
 
 <h3>④ 录音</h3>
@@ -49,12 +52,30 @@
 const materials = [
   {
     sentences: [
-      { text: "今天天气很好。", audio: "coffee_1.mp3" },
-      { text: "我们一起去喝咖啡吧。", audio: "coffee_2.mp3" },
-      { text: "你觉得怎么样？", audio: "coffee_3.mp3" }
+      {
+        text: "今天天气很好。",
+        pinyin: "Jīntiān tiānqì hěn hǎo.",
+        translation: "Today's weather is very nice.",
+        audio: "coffee_1.mp3"
+      },
+      {
+        text: "我们一起去喝咖啡吧。",
+        pinyin: "Wǒmen yìqǐ qù hē kāfēi ba.",
+        translation: "Let's go have coffee together.",
+        audio: "coffee_2.mp3"
+      },
+      {
+        text: "你觉得怎么样？",
+        pinyin: "Nǐ juéde zěnmeyàng?",
+        translation: "What do you think?",
+        audio: "coffee_3.mp3"
+      }
     ]
   }
 ];
+
+let showPinyin = false;
+let showTranslation = false;
 
 const audio = document.getElementById("audioPlayer");
 const textDisplay = document.getElementById("textDisplay");
@@ -65,21 +86,50 @@ function changeMaterial() {
 
 function renderSentences(sentences) {
   textDisplay.innerHTML = "";
+
   sentences.forEach(sentence => {
-    const p = document.createElement("p");
-    p.innerText = sentence.text;
-    p.style.cursor = "pointer";
-    p.onclick = () => {
+    const container = document.createElement("div");
+    container.style.marginBottom = "12px";
+    container.style.cursor = "pointer";
+
+    const hanzi = document.createElement("div");
+    hanzi.innerText = sentence.text;
+    hanzi.style.fontSize = "20px";
+    hanzi.onclick = () => {
       audio.src = sentence.audio;
       audio.play();
     };
-    textDisplay.appendChild(p);
+
+    const pinyin = document.createElement("div");
+    pinyin.innerText = sentence.pinyin;
+    pinyin.style.color = "#666";
+    pinyin.style.display = showPinyin ? "block" : "none";
+
+    const translation = document.createElement("div");
+    translation.innerText = sentence.translation;
+    translation.style.color = "#999";
+    translation.style.display = showTranslation ? "block" : "none";
+
+    container.appendChild(hanzi);
+    container.appendChild(pinyin);
+    container.appendChild(translation);
+    textDisplay.appendChild(container);
   });
+}
+
+function togglePinyin() {
+  showPinyin = !showPinyin;
+  changeMaterial();
+}
+
+function toggleTranslation() {
+  showTranslation = !showTranslation;
+  changeMaterial();
 }
 
 changeMaterial();
 
-// 录音逻辑（保持不变）
+// 🎙 录音逻辑（保持不变）
 let mediaRecorder;
 let audioChunks = [];
 
