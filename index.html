@@ -49,11 +49,10 @@
 const materials = [
   {
     sentences: [
-      "今天天气很好。",
-      "我们一起去喝咖啡吧。",
-      "你觉得怎么样？"
-    ],
-    audio: "coffee.mp3"
+      { text: "今天天气很好。", audio: "coffee_1.mp3" },
+      { text: "我们一起去喝咖啡吧。", audio: "coffee_2.mp3" },
+      { text: "你觉得怎么样？", audio: "coffee_3.mp3" }
+    ]
   }
 ];
 
@@ -61,27 +60,21 @@ const audio = document.getElementById("audioPlayer");
 const textDisplay = document.getElementById("textDisplay");
 
 function changeMaterial() {
-  const material = materials[0];
-  audio.src = material.audio;
-  renderSentences(material.sentences);
+  renderSentences(materials[0].sentences);
 }
 
 function renderSentences(sentences) {
   textDisplay.innerHTML = "";
-  sentences.forEach((sentence, index) => {
+  sentences.forEach(sentence => {
     const p = document.createElement("p");
-    p.innerText = sentence;
+    p.innerText = sentence.text;
     p.style.cursor = "pointer";
-    p.onclick = () => playSentence(index);
+    p.onclick = () => {
+      audio.src = sentence.audio;
+      audio.play();
+    };
     textDisplay.appendChild(p);
   });
-}
-
-// ⚠️ 先用“假时间轴”（下一步再精确）
-function playSentence(index) {
-  const approxTimes = [0, 3, 7]; // 每句开始时间（秒）
-  audio.currentTime = approxTimes[index];
-  audio.play();
 }
 
 changeMaterial();
