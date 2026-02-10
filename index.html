@@ -48,25 +48,45 @@
 <script>
 const materials = [
   {
-    text: "今天天气很好，我们一起去喝咖啡吧。",
-    audio: "sample1.mp3"
-  },
-  {
-    text: "你好，很高兴认识你。你最近忙吗？",
-    audio: "sample2.mp3"
+    sentences: [
+      "今天天气很好。",
+      "我们一起去喝咖啡吧。",
+      "你觉得怎么样？"
+    ],
+    audio: "coffee.mp3"
   }
 ];
 
+const audio = document.getElementById("audioPlayer");
+const textDisplay = document.getElementById("textDisplay");
+
 function changeMaterial() {
-  const index = document.getElementById("materialSelect").value;
-  document.getElementById("textDisplay").innerText = materials[index].text;
-  document.getElementById("audioPlayer").src = materials[index].audio;
+  const material = materials[0];
+  audio.src = material.audio;
+  renderSentences(material.sentences);
 }
 
-// 初始化
+function renderSentences(sentences) {
+  textDisplay.innerHTML = "";
+  sentences.forEach((sentence, index) => {
+    const p = document.createElement("p");
+    p.innerText = sentence;
+    p.style.cursor = "pointer";
+    p.onclick = () => playSentence(index);
+    textDisplay.appendChild(p);
+  });
+}
+
+// ⚠️ 先用“假时间轴”（下一步再精确）
+function playSentence(index) {
+  const approxTimes = [0, 3, 7]; // 每句开始时间（秒）
+  audio.currentTime = approxTimes[index];
+  audio.play();
+}
+
 changeMaterial();
 
-// 录音逻辑
+// 录音逻辑（保持不变）
 let mediaRecorder;
 let audioChunks = [];
 
