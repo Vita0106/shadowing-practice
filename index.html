@@ -1,14 +1,99 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>影子跟读练习</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 720px;
+      margin: auto;
+      padding: 20px;
+    }
+    select, button {
+      font-size: 16px;
+      margin: 6px 0;
+      padding: 6px 10px;
+    }
+    .text {
+      font-size: 20px;
+      line-height: 1.8;
+      margin: 16px 0;
+    }
+  </style>
 </head>
 <body>
 
 <h1>影子跟读练习</h1>
 
-<p>如果你能看到这行字，说明你的网站已经成功上线。</p>
+<h3>① 选择素材</h3>
+<select id="materialSelect" onchange="changeMaterial()">
+  <option value="0">咖啡对话（初级）</option>
+  <option value="1">日常问候（初级）</option>
+</select>
+
+<h3>② 听原音</h3>
+<audio id="audioPlayer" controls></audio>
+
+<h3>③ 跟读文本</h3>
+<div class="text" id="textDisplay"></div>
+
+<h3>④ 录音</h3>
+<button onclick="startRecording()">开始录音</button>
+<button onclick="stopRecording()">停止并下载</button>
+
+<p id="status"></p>
+<a id="downloadLink"></a>
+
+<script>
+const materials = [
+  {
+    text: "今天天气很好，我们一起去喝咖啡吧。",
+    audio: "sample1.mp3"
+  },
+  {
+    text: "你好，很高兴认识你。你最近忙吗？",
+    audio: "sample2.mp3"
+  }
+];
+
+function changeMaterial() {
+  const index = document.getElementById("materialSelect").value;
+  document.getElementById("textDisplay").innerText = materials[index].text;
+  document.getElementById("audioPlayer").src = materials[index].audio;
+}
+
+// 初始化
+changeMaterial();
+
+// 录音逻辑
+let mediaRecorder;
+let audioChunks = [];
+
+function startRecording() {
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start();
+      audioChunks = [];
+      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+      document.getElementById("status").innerText = "🎙 正在录音...";
+    });
+}
+
+function stopRecording() {
+  mediaRecorder.stop();
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+    const url = URL.createObjectURL(blob);
+    const link = document.getElementById("downloadLink");
+    link.href = url;
+    link.download = "my-shadowing.webm";
+    link.innerText = "⬇️ 下载录音";
+    document.getElementById("status").innerText = "录音完成";
+  };
+}
+</script>
 
 </body>
 </html>
